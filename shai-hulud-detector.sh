@@ -143,8 +143,14 @@ check_workflow_files() {
 # Check file hashes against known malicious hash
 check_file_hashes() {
     local scan_dir=$1
-    print_status "$BLUE" "🔍 Checking file hashes for known malicious content..."
 
+    local filesCount
+    filesCount=$(find "$scan_dir" -type f \( -name "*.js" -o -name "*.ts" -o -name "*.json" \) | wc -l 2>/dev/null)
+
+    print_status "$BLUE" "🔍 Checking $filesCount files for known malicious content..."
+
+    local filesChecked
+    filesChecked=0
     while IFS= read -r -d '' file; do
         if [[ -f "$file" && -r "$file" ]]; then
             local file_hash
@@ -153,14 +159,23 @@ check_file_hashes() {
                 MALICIOUS_HASHES+=("$file:$file_hash")
             fi
         fi
+        filesChecked=$((filesChecked+1))
+        echo -ne "$filesChecked / $filesCount checked ($((filesChecked*100/filesCount)) %)\r"
+
     done < <(find "$scan_dir" -type f \( -name "*.js" -o -name "*.ts" -o -name "*.json" \) -print0 2>/dev/null)
 }
 
 # Check package.json files for compromised packages
 check_packages() {
     local scan_dir=$1
-    print_status "$BLUE" "🔍 Checking package.json files for compromised packages..."
 
+    local filesCount
+    filesCount=$(find "$scan_dir" -name "package.json" | wc -l 2>/dev/null)
+
+    print_status "$BLUE" "🔍 Checking $filesCount package.json files for compromised packages..."
+
+    local filesChecked
+    filesChecked=0
     while IFS= read -r -d '' package_file; do
         if [[ -f "$package_file" && -r "$package_file" ]]; then
             # Check for specific compromised packages
@@ -185,6 +200,10 @@ check_packages() {
                 fi
             done
         fi
+
+        filesChecked=$((filesChecked+1))
+        echo -ne "$filesChecked / $filesCount checked ($((filesChecked*100/filesCount)) %)\r"
+
     done < <(find "$scan_dir" -name "package.json" -print0 2>/dev/null)
 }
 
